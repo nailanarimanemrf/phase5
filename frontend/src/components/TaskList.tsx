@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import API from '../api/api';
+import React, { useEffect, useState } from "react";
+import API from "../api/api";
 
 interface Task {
   _id: string;
@@ -12,14 +12,23 @@ interface Task {
 export default function TaskList({ refresh }: { refresh: boolean }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editDueDate, setEditDueDate] = useState('');
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("dateAsc");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchTasks = async () => {
     try {
-      const { data } = await API.get('/tasks');
-      setTasks(data);
+      const params: any = {
+        status: statusFilter,
+        sort: sortOrder,
+      };
+      if (searchQuery) params.search = searchQuery;
+
+      const tasks = await API.get("/tasks", params);
+setTasks(tasks);
     } catch (err) {
       console.error(err);
     }
@@ -27,23 +36,23 @@ export default function TaskList({ refresh }: { refresh: boolean }) {
 
   useEffect(() => {
     fetchTasks();
-  }, [refresh]);
+  }, [refresh, statusFilter, sortOrder, searchQuery]);
 
   const handleDelete = async (id: string) => {
     try {
       await API.delete(`/tasks/${id}`);
-      setTasks(tasks.filter(task => task._id !== id));
+      setTasks(tasks.filter((task) => task._id !== id));
     } catch (err) {
       console.error(err);
-      alert('Erreur lors de la suppression');
+      alert("Erreur lors de la suppression");
     }
   };
 
   const handleEditClick = (task: Task) => {
     setEditingTaskId(task._id);
     setEditTitle(task.title);
-    setEditDescription(task.description || '');
-    setEditDueDate(task.dueDate ? task.dueDate.split('T')[0] : ''); // format YYYY-MM-DD
+    setEditDescription(task.description || "");
+    setEditDueDate(task.dueDate ? task.dueDate.split("T")[0] : "");
   };
 
   const handleEditSave = async (id: string) => {
@@ -51,14 +60,14 @@ export default function TaskList({ refresh }: { refresh: boolean }) {
       const updatedTask = {
         title: editTitle,
         description: editDescription,
-        dueDate: editDueDate || null
+        dueDate: editDueDate || null,
       };
       await API.put(`/tasks/${id}`, updatedTask);
-      setTasks(tasks.map(task => (task._id === id ? { ...task, ...updatedTask } : task)));
+      setTasks(tasks.map((task) => (task._id === id ? { ...task, ...updatedTask } : task)));
       setEditingTaskId(null);
     } catch (err) {
       console.error(err);
-      alert('Erreur lors de la modification');
+      alert("Erreur lors de la modification");
     }
   };
 
@@ -68,7 +77,37 @@ export default function TaskList({ refresh }: { refresh: boolean }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {tasks.map(task => (
+      {/* Filtre et tri */}
+      <div className="flex gap-2 flex-wrap mb-4">
+        <select
+          className="p-2 rounded border border-[var(--border)]"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="all">Tous</option>
+          <option value="En cours">En cours</option>
+          <option value="Terminée">Terminée</option>
+        </select>
+
+        <select
+          className="p-2 rounded border border-[var(--border)]"
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+        >
+          <option value="dateAsc">Date croissante</option>
+          <option value="dateDesc">Date décroissante</option>
+        </select>
+
+        <input
+          type="text"
+          placeholder="Rechercher..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="p-2 rounded border border-[var(--border)] flex-1"
+        />
+      </div>
+
+      {tasks.map((task) => (
         <div
           key={task._id}
           className="task-item flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[var(--card)] border border-[var(--border)] p-4 rounded-xl"
@@ -78,18 +117,18 @@ export default function TaskList({ refresh }: { refresh: boolean }) {
               <input
                 className="p-2 rounded border border-[var(--border)]"
                 value={editTitle}
-                onChange={e => setEditTitle(e.target.value)}
+                onChange={(e) => setEditTitle(e.target.value)}
               />
               <textarea
                 className="p-2 rounded border border-[var(--border)]"
                 value={editDescription}
-                onChange={e => setEditDescription(e.target.value)}
+                onChange={(e) => setEditDescription(e.target.value)}
               />
               <input
                 type="date"
                 className="p-2 rounded border border-[var(--border)]"
                 value={editDueDate}
-                onChange={e => setEditDueDate(e.target.value)}
+                onChange={(e) => setEditDueDate(e.target.value)}
               />
               <div className="flex gap-2">
                 <button
@@ -109,9 +148,11 @@ export default function TaskList({ refresh }: { refresh: boolean }) {
           ) : (
             <>
               <div className="flex flex-col gap-1 w-full max-w-[80%]">
-                <small className="text-gray-500 font-semibold">
-                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : ''}
-                </small>
+                {task.dueDate && (
+                  <small className="text-gray-500 font-semibold">
+                    {new Date(task.dueDate).toLocaleDateString()}
+                  </small>
+                )}
                 <h3 className="font-bold text-[var(--primary)]">{task.title}</h3>
                 {task.description && <p className="text-gray-700">{task.description}</p>}
               </div>

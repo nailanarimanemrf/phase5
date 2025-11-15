@@ -1,17 +1,40 @@
-import axios from 'axios'
+const API_URL = "http://localhost:5000";
 
-// URL de base de ton backend
-const API = axios.create({
-  baseURL: 'http://localhost:5000/api', // adapte si ton backend est sur un autre port
-})
-
-// Fonction pour définir le token dans les headers Authorization
 export const setAuthToken = (token: string | null) => {
   if (token) {
-    API.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    localStorage.setItem("taskifyyToken", token);
   } else {
-    delete API.defaults.headers.common['Authorization']
+    localStorage.removeItem("taskifyyToken");
   }
-}
+};
 
-export default API
+export const apiRequest = async (endpoint: string, method = "GET", body?: any) => {
+  const token = localStorage.getItem("taskifyyToken");
+
+  const options: RequestInit = {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  };
+
+  if (body) options.body = JSON.stringify(body);
+
+  const res = await fetch(API_URL + endpoint, options);
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || "Erreur HTTP : " + res.status);
+  }
+
+  return res.json();
+};
+
+export default {
+  apiRequest,
+  get: (url: string) => apiRequest(url),
+  post: (url: string, body: any) => apiRequest(url, "POST", body),
+  put: (url: string, body: any) => apiRequest(url, "PUT", body),
+  delete: (url: string) => apiRequest(url, "DELETE"),
+};
