@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000";
+const API_URL = "https://taskifyy-backend.onrender.com";
 
 export const setAuthToken = (token: string | null) => {
   if (token) {
